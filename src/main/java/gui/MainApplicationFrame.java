@@ -13,6 +13,7 @@ import javax.swing.JMenuItem;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
+import javax.swing.JOptionPane;
 
 import log.Logger;
 
@@ -94,50 +95,59 @@ public class MainApplicationFrame extends JFrame
 // 
 //        return menuBar;
 //    }
-    
-    private JMenuBar generateMenuBar()
-    {
+
+    private JMenuBar generateMenuBar() {
         JMenuBar menuBar = new JMenuBar();
-        
+
+        menuBar.add(createFileMenu());
+        menuBar.add(createLookAndFeelMenu());
+        menuBar.add(createTestMenu());
+
+        return menuBar;
+    }
+
+    private JMenu createFileMenu() {
+        JMenu fileMenu = new JMenu("Файл");
+        fileMenu.setMnemonic(KeyEvent.VK_F);
+
+        JMenuItem exitItem = new JMenuItem("Выход", KeyEvent.VK_X);
+        exitItem.addActionListener(event -> confirmExit());
+        fileMenu.add(exitItem);
+
+        return fileMenu;
+    }
+
+    private JMenu createLookAndFeelMenu() {
         JMenu lookAndFeelMenu = new JMenu("Режим отображения");
         lookAndFeelMenu.setMnemonic(KeyEvent.VK_V);
         lookAndFeelMenu.getAccessibleContext().setAccessibleDescription(
                 "Управление режимом отображения приложения");
-        
-        {
-            JMenuItem systemLookAndFeel = new JMenuItem("Системная схема", KeyEvent.VK_S);
-            systemLookAndFeel.addActionListener((event) -> {
-                setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-                this.invalidate();
-            });
-            lookAndFeelMenu.add(systemLookAndFeel);
-        }
 
-        {
-            JMenuItem crossplatformLookAndFeel = new JMenuItem("Универсальная схема", KeyEvent.VK_S);
-            crossplatformLookAndFeel.addActionListener((event) -> {
-                setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
-                this.invalidate();
-            });
-            lookAndFeelMenu.add(crossplatformLookAndFeel);
-        }
+        lookAndFeelMenu.add(createLookAndFeelItem("Системная схема", UIManager.getSystemLookAndFeelClassName()));
+        lookAndFeelMenu.add(createLookAndFeelItem("Универсальная схема", UIManager.getCrossPlatformLookAndFeelClassName()));
 
+        return lookAndFeelMenu;
+    }
+
+    private JMenuItem createLookAndFeelItem(String name, String lookAndFeelClass) {
+        JMenuItem item = new JMenuItem(name);
+        item.addActionListener(event -> {
+            setLookAndFeel(lookAndFeelClass);
+            this.invalidate();
+        });
+        return item;
+    }
+
+    private JMenu createTestMenu() {
         JMenu testMenu = new JMenu("Тесты");
         testMenu.setMnemonic(KeyEvent.VK_T);
-        testMenu.getAccessibleContext().setAccessibleDescription(
-                "Тестовые команды");
-        
-        {
-            JMenuItem addLogMessageItem = new JMenuItem("Сообщение в лог", KeyEvent.VK_S);
-            addLogMessageItem.addActionListener((event) -> {
-                Logger.debug("Новая строка");
-            });
-            testMenu.add(addLogMessageItem);
-        }
+        testMenu.getAccessibleContext().setAccessibleDescription("Тестовые команды");
 
-        menuBar.add(lookAndFeelMenu);
-        menuBar.add(testMenu);
-        return menuBar;
+        JMenuItem addLogMessageItem = new JMenuItem("Сообщение в лог", KeyEvent.VK_S);
+        addLogMessageItem.addActionListener(event -> Logger.debug("Новая строка"));
+        testMenu.add(addLogMessageItem);
+
+        return testMenu;
     }
     
     private void setLookAndFeel(String className)
@@ -151,6 +161,19 @@ public class MainApplicationFrame extends JFrame
             | IllegalAccessException | UnsupportedLookAndFeelException e)
         {
             // just ignore
+        }
+    }
+
+    private void confirmExit() {
+        UIManager.put("OptionPane.yesButtonText", "Да");
+        UIManager.put("OptionPane.noButtonText", "Нет");
+        UIManager.put("OptionPane.cancelButtonText", "Отмена");
+
+        int confirmed = JOptionPane.showConfirmDialog(this,
+                "Вы уверены, что хотите выйти?", "Подтверждение выхода",
+                JOptionPane.YES_NO_OPTION);
+        if (confirmed == JOptionPane.YES_OPTION) {
+            System.exit(0);
         }
     }
 }
