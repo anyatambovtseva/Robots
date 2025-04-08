@@ -4,13 +4,55 @@ import log.Logger;
 
 import javax.swing.*;
 import java.awt.*;
+import java.lang.annotation.*;
 import java.util.prefs.Preferences;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+@interface PersistWindowState {
+    boolean value() default true;
+}
 
 public class WindowStateManager {
     private static final String PREF_NODE = "/robots_game/window_states";
     private final Preferences prefs;
     private final JFrame mainFrame;
     private final JDesktopPane desktopPane;
+
+    private record WindowGeometry(int x, int y, int width, int height) {
+        public static WindowGeometry fromComponent(Component frame) {
+            return new WindowGeometry(frame.getX(), frame.getY(),
+                    frame.getWidth(), frame.getHeight());
+        }
+    }
+
+    private record MainFrameState(WindowGeometry geometry, int extendedState) {
+        public static MainFrameState fromFrame(JFrame frame) {
+            return new MainFrameState(
+                    WindowGeometry.fromComponent(frame),
+                    frame.getExtendedState()
+            );
+        }
+    }
+
+    private boolean shouldPersist(Component component) {
+        PersistWindowState annotation = component.getClass().getAnnotation(PersistWindowState.class);
+        return annotation == null || annotation.value();
+    }
+
+    private record InternalFrameState(WindowGeometry geometry,
+                                      boolean isMinimized,
+                                      boolean isMaximized) {
+        public static InternalFrameState fromFrame(JInternalFrame frame) {
+            return new InternalFrameState(
+                    WindowGeometry.fromComponent(frame),
+                    frame.isIcon(),
+                    frame.isMaximum()
+            );
+        }
+    }
 
     public WindowStateManager(JFrame mainFrame, JDesktopPane desktopPane) {
         this.mainFrame = mainFrame;
@@ -20,17 +62,12 @@ public class WindowStateManager {
 
     public void loadWindowStates() {
         try {
-            int mainX = prefs.getInt("main.x", mainFrame.getX());
-            int mainY = prefs.getInt("main.y", mainFrame.getY());
-            int mainWidth = prefs.getInt("main.width", mainFrame.getWidth());
-            int mainHeight = prefs.getInt("main.height", mainFrame.getHeight());
-            int mainState = prefs.getInt("main.state", Frame.NORMAL);
-
-            mainFrame.setBounds(mainX, mainY, mainWidth, mainHeight);
-            mainFrame.setExtendedState(mainState);
+            if (shouldPersist(mainFrame)) {
+                loadFrameStateWithReflection(mainFrame, "main");
+            }
 
             for (Component component : desktopPane.getComponents()) {
-                if (component instanceof JInternalFrame) {
+                if (component instanceof JInternalFrame && shouldPersist(component)) {
                     loadInternalFrameState((JInternalFrame) component);
                 }
             }
@@ -42,32 +79,46 @@ public class WindowStateManager {
     private void loadInternalFrameState(JInternalFrame frame) {
         try {
             String prefix = "window." + frame.getTitle().replace(" ", "_");
-
-            int x = prefs.getInt(prefix + ".x", frame.getX());
-            int y = prefs.getInt(prefix + ".y", frame.getY());
-            int width = prefs.getInt(prefix + ".width", frame.getWidth());
-            int height = prefs.getInt(prefix + ".height", frame.getHeight());
-            boolean isIcon = prefs.getBoolean(prefix + ".icon", false);
-            boolean isMaximized = prefs.getBoolean(prefix + ".maximized", false);
-
-            frame.setBounds(x, y, width, height);
-            frame.setIcon(isIcon);
-            frame.setMaximum(isMaximized);
+            loadFrameStateWithReflection(frame, prefix);
         } catch (Exception e) {
             Logger.error("Error loading window state for " + frame.getTitle() + ": " + e.getMessage());
         }
     }
 
+    private void loadFrameStateWithReflection(Component frame, String prefix) throws Exception {
+        try {
+            WindowGeometry geometry = new WindowGeometry(
+                    prefs.getInt(prefix + ".x", frame.getX()),
+                    prefs.getInt(prefix + ".y", frame.getY()),
+                    prefs.getInt(prefix + ".width", frame.getWidth()),
+                    prefs.getInt(prefix + ".height", frame.getHeight())
+            );
+
+            frame.setBounds(geometry.x(), geometry.y(),
+                    geometry.width(), geometry.height());
+
+            if (frame instanceof JFrame) {
+                int state = prefs.getInt(prefix + ".state", Frame.NORMAL);
+                ((JFrame) frame).setExtendedState(state);
+            } else if (frame instanceof JInternalFrame) {
+                boolean isMinimizedToIcon = prefs.getBoolean(prefix + ".isMinimized", false);
+                boolean isMaximized = prefs.getBoolean(prefix + ".isMaximized", false);
+                ((JInternalFrame) frame).setIcon(isMinimizedToIcon);
+                ((JInternalFrame) frame).setMaximum(isMaximized);
+            }
+        } catch (Exception e) {
+            throw new Exception("Failed to load frame state with reflection: " + e.getMessage(), e);
+        }
+    }
+
     public void saveWindowStates() {
         try {
-            prefs.putInt("main.x", mainFrame.getX());
-            prefs.putInt("main.y", mainFrame.getY());
-            prefs.putInt("main.width", mainFrame.getWidth());
-            prefs.putInt("main.height", mainFrame.getHeight());
-            prefs.putInt("main.state", mainFrame.getExtendedState());
+            if (shouldPersist(mainFrame)) {
+                saveFrameStateWithReflection(mainFrame, "main");
+            }
 
             for (Component component : desktopPane.getComponents()) {
-                if (component instanceof JInternalFrame) {
+                if (component instanceof JInternalFrame && shouldPersist(component)) {
                     saveInternalFrameState((JInternalFrame) component);
                 }
             }
@@ -81,15 +132,45 @@ public class WindowStateManager {
     private void saveInternalFrameState(JInternalFrame frame) {
         try {
             String prefix = "window." + frame.getTitle().replace(" ", "_");
-
-            prefs.putInt(prefix + ".x", frame.getX());
-            prefs.putInt(prefix + ".y", frame.getY());
-            prefs.putInt(prefix + ".width", frame.getWidth());
-            prefs.putInt(prefix + ".height", frame.getHeight());
-            prefs.putBoolean(prefix + ".icon", frame.isIcon());
-            prefs.putBoolean(prefix + ".maximized", frame.isMaximum());
+            saveFrameStateWithReflection(frame, prefix);
         } catch (Exception e) {
             Logger.error("Error saving window state for " + frame.getTitle() + ": " + e.getMessage());
         }
+    }
+
+    private void saveFrameStateWithReflection(Component frame, String prefix) throws Exception {
+        try {
+            if (frame instanceof JFrame) {
+                MainFrameState state = MainFrameState.fromFrame((JFrame) frame);
+                saveGeometry(state.geometry(), prefix);
+                prefs.putInt(prefix + ".state", state.extendedState());
+            } else if (frame instanceof JInternalFrame) {
+                InternalFrameState state = InternalFrameState.fromFrame((JInternalFrame) frame);
+                saveGeometry(state.geometry(), prefix);
+                prefs.putBoolean(prefix + ".isMinimized", state.isMinimized());
+                prefs.putBoolean(prefix + ".isMaximized", state.isMaximized());
+            }
+        } catch (Exception e) {
+            throw new Exception("Failed to save frame state: " + e.getMessage(), e);
+        }
+    }
+
+    private void saveGeometry(WindowGeometry geometry, String prefix) {
+        prefs.putInt(prefix + ".x", geometry.x());
+        prefs.putInt(prefix + ".y", geometry.y());
+        prefs.putInt(prefix + ".width", geometry.width());
+        prefs.putInt(prefix + ".height", geometry.height());
+    }
+
+    private Object invokeGetter(Object obj, String methodName)
+            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+        Method method = obj.getClass().getMethod(methodName);
+        return method.invoke(obj);
+    }
+
+    private void invokeSetter(Object obj, String methodName, Class<?>[] paramTypes, Object[] args)
+            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+        Method method = obj.getClass().getMethod(methodName, paramTypes);
+        method.invoke(obj, args);
     }
 }
