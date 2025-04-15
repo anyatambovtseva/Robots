@@ -56,7 +56,7 @@ public class WindowStateManager {
 
     private boolean shouldPersist(Component component) {
         PersistWindowState annotation = component.getClass().getAnnotation(PersistWindowState.class);
-        return annotation == null || annotation.value();
+        return annotation != null && annotation.value();
     }
 
     private void loadInternalFrameState(JInternalFrame frame) {
