@@ -4,55 +4,15 @@ import log.Logger;
 
 import javax.swing.*;
 import java.awt.*;
-import java.lang.annotation.*;
 import java.util.prefs.Preferences;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-@interface PersistWindowState {
-    boolean value() default true;
-}
 
 public class WindowStateManager {
     private static final String PREF_NODE = "/robots_game/window_states";
     private final Preferences prefs;
     private final JFrame mainFrame;
     private final JDesktopPane desktopPane;
-
-    private record WindowGeometry(int x, int y, int width, int height) {
-        public static WindowGeometry fromComponent(Component frame) {
-            return new WindowGeometry(frame.getX(), frame.getY(),
-                    frame.getWidth(), frame.getHeight());
-        }
-    }
-
-    private record MainFrameState(WindowGeometry geometry, int extendedState) {
-        public static MainFrameState fromFrame(JFrame frame) {
-            return new MainFrameState(
-                    WindowGeometry.fromComponent(frame),
-                    frame.getExtendedState()
-            );
-        }
-    }
-
-    private boolean shouldPersist(Component component) {
-        PersistWindowState annotation = component.getClass().getAnnotation(PersistWindowState.class);
-        return annotation == null || annotation.value();
-    }
-
-    private record InternalFrameState(WindowGeometry geometry,
-                                      boolean isMinimized,
-                                      boolean isMaximized) {
-        public static InternalFrameState fromFrame(JInternalFrame frame) {
-            return new InternalFrameState(
-                    WindowGeometry.fromComponent(frame),
-                    frame.isIcon(),
-                    frame.isMaximum()
-            );
-        }
-    }
 
     public WindowStateManager(JFrame mainFrame, JDesktopPane desktopPane) {
         this.mainFrame = mainFrame;
@@ -74,6 +34,29 @@ public class WindowStateManager {
         } catch (Exception e) {
             Logger.error("Error loading window states: " + e.getMessage());
         }
+    }
+
+    public void saveWindowStates() {
+        try {
+            if (shouldPersist(mainFrame)) {
+                saveFrameStateWithReflection(mainFrame, "main");
+            }
+
+            for (Component component : desktopPane.getComponents()) {
+                if (component instanceof JInternalFrame && shouldPersist(component)) {
+                    saveInternalFrameState((JInternalFrame) component);
+                }
+            }
+
+            prefs.flush();
+        } catch (Exception e) {
+            Logger.error("Error saving window states: " + e.getMessage());
+        }
+    }
+
+    private boolean shouldPersist(Component component) {
+        PersistWindowState annotation = component.getClass().getAnnotation(PersistWindowState.class);
+        return annotation == null || annotation.value();
     }
 
     private void loadInternalFrameState(JInternalFrame frame) {
@@ -108,24 +91,6 @@ public class WindowStateManager {
             }
         } catch (Exception e) {
             throw new Exception("Failed to load frame state with reflection: " + e.getMessage(), e);
-        }
-    }
-
-    public void saveWindowStates() {
-        try {
-            if (shouldPersist(mainFrame)) {
-                saveFrameStateWithReflection(mainFrame, "main");
-            }
-
-            for (Component component : desktopPane.getComponents()) {
-                if (component instanceof JInternalFrame && shouldPersist(component)) {
-                    saveInternalFrameState((JInternalFrame) component);
-                }
-            }
-
-            prefs.flush();
-        } catch (Exception e) {
-            Logger.error("Error saving window states: " + e.getMessage());
         }
     }
 
