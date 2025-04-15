@@ -1,6 +1,6 @@
 package gui;
 
-import javax.swing.*;
+import javax.swing.JInternalFrame;
 
 public record InternalFrameState(WindowGeometry geometry,
                                  boolean isMinimized,

@@ -5,8 +5,6 @@ import log.Logger;
 import javax.swing.*;
 import java.awt.*;
 import java.util.prefs.Preferences;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 
 public class WindowStateManager {
     private static final String PREF_NODE = "/robots_game/window_states";
@@ -23,7 +21,7 @@ public class WindowStateManager {
     public void loadWindowStates() {
         try {
             if (shouldPersist(mainFrame)) {
-                loadFrameStateWithReflection(mainFrame, "main");
+                loadFrameState(mainFrame, WindowPrefKeys.getMainWindowPrefix());
             }
 
             for (Component component : desktopPane.getComponents()) {
@@ -39,7 +37,7 @@ public class WindowStateManager {
     public void saveWindowStates() {
         try {
             if (shouldPersist(mainFrame)) {
-                saveFrameStateWithReflection(mainFrame, "main");
+                saveFrameState(mainFrame, WindowPrefKeys.getMainWindowPrefix());
             }
 
             for (Component component : desktopPane.getComponents()) {
@@ -47,7 +45,6 @@ public class WindowStateManager {
                     saveInternalFrameState(internalFrame);
                 }
             }
-
             prefs.flush();
         } catch (Exception e) {
             Logger.error("Error saving window states: " + e.getMessage());
@@ -61,32 +58,31 @@ public class WindowStateManager {
 
     private void loadInternalFrameState(JInternalFrame frame) {
         try {
-            String prefix = "window." + frame.getTitle().replace(" ", "_");
-            loadFrameStateWithReflection(frame, prefix);
+            String prefix = WindowPrefKeys.getInternalWindowPrefix() + "." + frame.getTitle().replace(" ", "_");
+            loadFrameState(frame, prefix);
         } catch (Exception e) {
             Logger.error("Error loading window state for " + frame.getTitle() + ": " + e.getMessage());
         }
     }
 
-    private void loadFrameStateWithReflection(Component frame, String prefix) throws Exception {
+    private void loadFrameState(Component frame, String prefix) throws Exception {
         try {
             WindowGeometry geometry = new WindowGeometry(
-                    prefs.getInt(prefix + ".x", frame.getX()),
-                    prefs.getInt(prefix + ".y", frame.getY()),
-                    prefs.getInt(prefix + ".width", frame.getWidth()),
-                    prefs.getInt(prefix + ".height", frame.getHeight())
+                    prefs.getInt(WindowPrefKeys.X.getFullKey(prefix), frame.getX()),
+                    prefs.getInt(WindowPrefKeys.Y.getFullKey(prefix), frame.getY()),
+                    prefs.getInt(WindowPrefKeys.WIDTH.getFullKey(prefix), frame.getWidth()),
+                    prefs.getInt(WindowPrefKeys.HEIGHT.getFullKey(prefix), frame.getHeight())
             );
 
-            frame.setBounds(geometry.x(), geometry.y(),
-                    geometry.width(), geometry.height());
+            frame.setBounds(geometry.x(), geometry.y(), geometry.width(), geometry.height());
 
             if (frame instanceof JFrame jFrame) {
-                int state = prefs.getInt(prefix + ".state", Frame.NORMAL);
+                int state = prefs.getInt(WindowPrefKeys.STATE.getFullKey(prefix), Frame.NORMAL);
                 jFrame.setExtendedState(state);
             } else if (frame instanceof JInternalFrame internalFrame) {
-                boolean isMinimizedToIcon = prefs.getBoolean(prefix + ".isMinimized", false);
-                boolean isMaximized = prefs.getBoolean(prefix + ".isMaximized", false);
-                internalFrame.setIcon(isMinimizedToIcon);
+                boolean isMinimized = prefs.getBoolean(WindowPrefKeys.IS_MINIMIZED.getFullKey(prefix), false);
+                boolean isMaximized = prefs.getBoolean(WindowPrefKeys.IS_MAXIMIZED.getFullKey(prefix), false);
+                internalFrame.setIcon(isMinimized);
                 internalFrame.setMaximum(isMaximized);
             }
         } catch (Exception e) {
@@ -96,24 +92,24 @@ public class WindowStateManager {
 
     private void saveInternalFrameState(JInternalFrame frame) {
         try {
-            String prefix = "window." + frame.getTitle().replace(" ", "_");
-            saveFrameStateWithReflection(frame, prefix);
+            String prefix = WindowPrefKeys.getInternalWindowPrefix() + "." + frame.getTitle().replace(" ", "_");
+            saveFrameState(frame, prefix);
         } catch (Exception e) {
             Logger.error("Error saving window state for " + frame.getTitle() + ": " + e.getMessage());
         }
     }
 
-    private void saveFrameStateWithReflection(Component frame, String prefix) throws Exception {
+    private void saveFrameState(Component frame, String prefix) throws Exception {
         try {
             if (frame instanceof JFrame jFrame) {
                 MainFrameState state = MainFrameState.fromFrame(jFrame);
                 saveGeometry(state.geometry(), prefix);
-                prefs.putInt(prefix + ".state", state.extendedState());
+                prefs.putInt(WindowPrefKeys.STATE.getFullKey(prefix), state.extendedState());
             } else if (frame instanceof JInternalFrame internalFrame) {
                 InternalFrameState state = InternalFrameState.fromFrame(internalFrame);
                 saveGeometry(state.geometry(), prefix);
-                prefs.putBoolean(prefix + ".isMinimized", state.isMinimized());
-                prefs.putBoolean(prefix + ".isMaximized", state.isMaximized());
+                prefs.putBoolean(WindowPrefKeys.IS_MINIMIZED.getFullKey(prefix), state.isMinimized());
+                prefs.putBoolean(WindowPrefKeys.IS_MAXIMIZED.getFullKey(prefix), state.isMaximized());
             }
         } catch (Exception e) {
             throw new Exception("Failed to save frame state: " + e.getMessage(), e);
@@ -121,21 +117,9 @@ public class WindowStateManager {
     }
 
     private void saveGeometry(WindowGeometry geometry, String prefix) {
-        prefs.putInt(prefix + ".x", geometry.x());
-        prefs.putInt(prefix + ".y", geometry.y());
-        prefs.putInt(prefix + ".width", geometry.width());
-        prefs.putInt(prefix + ".height", geometry.height());
-    }
-
-    private Object invokeGetter(Object obj, String methodName)
-            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
-        Method method = obj.getClass().getMethod(methodName);
-        return method.invoke(obj);
-    }
-
-    private void invokeSetter(Object obj, String methodName, Class<?>[] paramTypes, Object[] args)
-            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
-        Method method = obj.getClass().getMethod(methodName, paramTypes);
-        method.invoke(obj, args);
+        prefs.putInt(WindowPrefKeys.X.getFullKey(prefix), geometry.x());
+        prefs.putInt(WindowPrefKeys.Y.getFullKey(prefix), geometry.y());
+        prefs.putInt(WindowPrefKeys.WIDTH.getFullKey(prefix), geometry.width());
+        prefs.putInt(WindowPrefKeys.HEIGHT.getFullKey(prefix), geometry.height());
     }
 }

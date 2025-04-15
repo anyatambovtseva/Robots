@@ -1,6 +1,6 @@
 package gui;
 
-import javax.swing.*;
+import javax.swing.JFrame;
 
 public record MainFrameState(WindowGeometry geometry, int extendedState) {
     public static MainFrameState fromFrame(JFrame frame) {
