@@ -27,8 +27,8 @@ public class WindowStateManager {
             }
 
             for (Component component : desktopPane.getComponents()) {
-                if (component instanceof JInternalFrame && shouldPersist(component)) {
-                    loadInternalFrameState((JInternalFrame) component);
+                if (component instanceof JInternalFrame internalFrame && shouldPersist(internalFrame)) {
+                    loadInternalFrameState(internalFrame);
                 }
             }
         } catch (Exception e) {
@@ -43,8 +43,8 @@ public class WindowStateManager {
             }
 
             for (Component component : desktopPane.getComponents()) {
-                if (component instanceof JInternalFrame && shouldPersist(component)) {
-                    saveInternalFrameState((JInternalFrame) component);
+                if (component instanceof JInternalFrame internalFrame && shouldPersist(internalFrame)) {
+                    saveInternalFrameState(internalFrame);
                 }
             }
 
@@ -80,17 +80,17 @@ public class WindowStateManager {
             frame.setBounds(geometry.x(), geometry.y(),
                     geometry.width(), geometry.height());
 
-            if (frame instanceof JFrame) {
+            if (frame instanceof JFrame jFrame) {
                 int state = prefs.getInt(prefix + ".state", Frame.NORMAL);
-                ((JFrame) frame).setExtendedState(state);
-            } else if (frame instanceof JInternalFrame) {
+                jFrame.setExtendedState(state);
+            } else if (frame instanceof JInternalFrame internalFrame) {
                 boolean isMinimizedToIcon = prefs.getBoolean(prefix + ".isMinimized", false);
                 boolean isMaximized = prefs.getBoolean(prefix + ".isMaximized", false);
-                ((JInternalFrame) frame).setIcon(isMinimizedToIcon);
-                ((JInternalFrame) frame).setMaximum(isMaximized);
+                internalFrame.setIcon(isMinimizedToIcon);
+                internalFrame.setMaximum(isMaximized);
             }
         } catch (Exception e) {
-            throw new Exception("Failed to load frame state with reflection: " + e.getMessage(), e);
+            throw new Exception("Failed to load frame state: " + e.getMessage(), e);
         }
     }
 
@@ -105,12 +105,12 @@ public class WindowStateManager {
 
     private void saveFrameStateWithReflection(Component frame, String prefix) throws Exception {
         try {
-            if (frame instanceof JFrame) {
-                MainFrameState state = MainFrameState.fromFrame((JFrame) frame);
+            if (frame instanceof JFrame jFrame) {
+                MainFrameState state = MainFrameState.fromFrame(jFrame);
                 saveGeometry(state.geometry(), prefix);
                 prefs.putInt(prefix + ".state", state.extendedState());
-            } else if (frame instanceof JInternalFrame) {
-                InternalFrameState state = InternalFrameState.fromFrame((JInternalFrame) frame);
+            } else if (frame instanceof JInternalFrame internalFrame) {
+                InternalFrameState state = InternalFrameState.fromFrame(internalFrame);
                 saveGeometry(state.geometry(), prefix);
                 prefs.putBoolean(prefix + ".isMinimized", state.isMinimized());
                 prefs.putBoolean(prefix + ".isMaximized", state.isMaximized());
