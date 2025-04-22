@@ -1,7 +1,6 @@
 package log;
 
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -42,7 +41,7 @@ public class CircularBuffer<T> {
             return Collections.emptyList();
         }
 
-        return () -> new SafeIterator<>(startFrom, count);
+        return () -> new SafeIterator<>(this, startFrom, count);
     }
 
     public Iterable<T> all() {
@@ -50,7 +49,7 @@ public class CircularBuffer<T> {
     }
 
     @SuppressWarnings("unchecked")
-    private T get(int index) {
+    T get(int index) {
         bufferLock.readLock().lock();
         try {
             if (index < 0 || index >= size.get()) {
@@ -59,35 +58,6 @@ public class CircularBuffer<T> {
             return (T) buffer[(startIndex.get() + index) % capacity];
         } finally {
             bufferLock.readLock().unlock();
-        }
-    }
-
-    private class SafeIterator<E> implements Iterator<E> {
-        private final int endIndex;
-        private int currentIndex;
-        private final int maxIndex;
-
-        public SafeIterator(int startFrom, int count) {
-            int currentSize = size.get();
-            this.currentIndex = startFrom;
-            this.maxIndex = Math.min(startFrom + count, currentSize);
-            this.endIndex = currentSize;
-        }
-
-        @Override
-        public boolean hasNext() {
-            return currentIndex < maxIndex && currentIndex < endIndex;
-        }
-
-        @Override
-        @SuppressWarnings("unchecked")
-        public E next() {
-            if (!hasNext()) {
-                throw new java.util.NoSuchElementException();
-            }
-            E item = (E) get(currentIndex);
-            currentIndex++;
-            return item;
         }
     }
 }
