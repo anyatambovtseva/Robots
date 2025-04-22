@@ -2,23 +2,23 @@ package log;
 
 public class LogEntry
 {
-    private LogLevel m_logLevel;
-    private String m_strMessage;
+    private final LogLevel logLevel;
+    private final String message;
     
-    public LogEntry(LogLevel logLevel, String strMessage)
+    public LogEntry(LogLevel logLevel, String message)
     {
-        m_strMessage = strMessage;
-        m_logLevel = logLevel;
+        this.message = message;
+        this.logLevel = logLevel;
     }
     
     public String getMessage()
     {
-        return m_strMessage;
+        return message;
     }
     
     public LogLevel getLevel()
     {
-        return m_logLevel;
+        return logLevel;
     }
 }
 
