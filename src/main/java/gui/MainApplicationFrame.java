@@ -5,6 +5,8 @@ import java.awt.Toolkit;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.swing.JDesktopPane;
 import javax.swing.JFrame;
@@ -16,12 +18,14 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.JOptionPane;
+import javax.swing.event.InternalFrameAdapter;
+import javax.swing.event.InternalFrameEvent;
 
 import log.Logger;
 
 /**
  * Что требуется сделать:
- * 1. Метод создания меню перегружен функционалом и трудно читается. 
+ * 1. Метод создания меню перегружен функционалом и трудно читается.
  * Следует разделить его на серию более простых методов (или вообще выделить отдельный класс).
  *
  */
@@ -30,6 +34,7 @@ public class MainApplicationFrame extends JFrame
 {
     private final JDesktopPane desktopPane = new JDesktopPane();
     private final WindowStateManager windowStateManager;
+    private final List<JInternalFrame> closedWindows = new ArrayList<>();
 
     public MainApplicationFrame() {
         int inset = 50;
@@ -76,6 +81,12 @@ public class MainApplicationFrame extends JFrame
     {
         desktopPane.add(frame);
         frame.setVisible(true);
+        frame.addInternalFrameListener(new InternalFrameAdapter() {
+            @Override
+            public void internalFrameClosed(InternalFrameEvent e) {
+                closedWindows.add(frame);
+            }
+        });
     }
 
     private JMenuBar generateMenuBar() {
@@ -91,6 +102,10 @@ public class MainApplicationFrame extends JFrame
     private JMenu createFileMenu() {
         JMenu fileMenu = new JMenu("Файл");
         fileMenu.setMnemonic(KeyEvent.VK_F);
+
+        JMenuItem restoreWindowsItem = new JMenuItem("Восстановить окна", KeyEvent.VK_R);
+        restoreWindowsItem.addActionListener(event -> restoreClosedWindows());
+        fileMenu.add(restoreWindowsItem);
 
         JMenuItem exitItem = new JMenuItem("Выход", KeyEvent.VK_X);
         exitItem.addActionListener(event -> confirmExit());
@@ -157,6 +172,34 @@ public class MainApplicationFrame extends JFrame
         if (confirmed == JOptionPane.YES_OPTION) {
             windowStateManager.saveWindowStates();
             System.exit(0);
+        }
+    }
+
+    private void restoreClosedWindows() {
+        if (closedWindows.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Нет закрытых окон для восстановления",
+                    "Информация",
+                    JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        List<JInternalFrame> windowsToRestore = new ArrayList<>(closedWindows);
+        closedWindows.clear();
+
+        for (JInternalFrame frame : windowsToRestore) {
+            try {
+                if (frame instanceof LogWindow) {
+                    LogWindow logWindow = createLogWindow();
+                    addWindow(logWindow);
+                } else if (frame instanceof GameWindow) {
+                    GameWindow gameWindow = new GameWindow();
+                    gameWindow.setSize(400, 400);
+                    addWindow(gameWindow);
+                }
+            } catch (Exception e) {
+                Logger.error("Ошибка при восстановлении окна: " + e.getMessage());
+            }
         }
     }
 }
