@@ -1,23 +1,13 @@
 package gui;
 
-import java.awt.Dimension;
-import java.awt.Toolkit;
+import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.swing.JDesktopPane;
-import javax.swing.JFrame;
-import javax.swing.JInternalFrame;
-import javax.swing.JMenu;
-import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
-import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
-import javax.swing.UnsupportedLookAndFeelException;
-import javax.swing.JOptionPane;
+import javax.swing.*;
 import javax.swing.event.InternalFrameAdapter;
 import javax.swing.event.InternalFrameEvent;
 
@@ -95,6 +85,7 @@ public class MainApplicationFrame extends JFrame
         menuBar.add(createFileMenu());
         menuBar.add(createLookAndFeelMenu());
         menuBar.add(createTestMenu());
+        menuBar.add(createRobotMenu());
 
         return menuBar;
     }
@@ -112,6 +103,118 @@ public class MainApplicationFrame extends JFrame
         fileMenu.add(exitItem);
 
         return fileMenu;
+    }
+
+    private JMenu createRobotMenu() {
+        JMenu robotMenu = new JMenu("Робот");
+        robotMenu.setMnemonic(KeyEvent.VK_R);
+
+        // Размер робота
+        JMenu sizeMenu = new JMenu("Размер робота");
+        ButtonGroup sizeGroup = new ButtonGroup();
+
+        JRadioButtonMenuItem smallSize = new JRadioButtonMenuItem("Маленький (20)");
+        smallSize.addActionListener(e -> getGameWindow().getVisualizer().setRobotSize(20));
+        sizeMenu.add(smallSize);
+        sizeGroup.add(smallSize);
+
+        JRadioButtonMenuItem mediumSize = new JRadioButtonMenuItem("Средний (40)", true);
+        mediumSize.addActionListener(e -> getGameWindow().getVisualizer().setRobotSize(40));
+        sizeMenu.add(mediumSize);
+        sizeGroup.add(mediumSize);
+
+        JRadioButtonMenuItem largeSize = new JRadioButtonMenuItem("Большой (60)");
+        largeSize.addActionListener(e -> getGameWindow().getVisualizer().setRobotSize(60));
+        sizeMenu.add(largeSize);
+        sizeGroup.add(largeSize);
+
+        robotMenu.add(sizeMenu);
+
+        // Форма робота
+        JMenu shapeMenu = new JMenu("Форма");
+        ButtonGroup shapeGroup = new ButtonGroup();
+
+        JRadioButtonMenuItem ovalShape = new JRadioButtonMenuItem("Овал", true);
+        ovalShape.addActionListener(e -> getGameWindow().getVisualizer().getRobotSettings().setShape(RobotShape.OVAL));
+        shapeMenu.add(ovalShape);
+        shapeGroup.add(ovalShape);
+
+        JRadioButtonMenuItem rectShape = new JRadioButtonMenuItem("Прямоугольник");
+        rectShape.addActionListener(e -> getGameWindow().getVisualizer().getRobotSettings().setShape(RobotShape.RECTANGLE));
+        shapeMenu.add(rectShape);
+        shapeGroup.add(rectShape);
+
+        JRadioButtonMenuItem triangleShape = new JRadioButtonMenuItem("Треугольник");
+        triangleShape.addActionListener(e -> getGameWindow().getVisualizer().getRobotSettings().setShape(RobotShape.TRIANGLE));
+        shapeMenu.add(triangleShape);
+        shapeGroup.add(triangleShape);
+
+        robotMenu.add(shapeMenu);
+
+        // Цвет робота
+        JMenu colorMenu = new JMenu("Цвет");
+        JMenuItem magentaColor = new JMenuItem("Пурпурный");
+        magentaColor.addActionListener(e -> getGameWindow().getVisualizer().getRobotSettings().setRobotColor(Color.MAGENTA));
+        colorMenu.add(magentaColor);
+
+        JMenuItem blueColor = new JMenuItem("Синий");
+        blueColor.addActionListener(e -> getGameWindow().getVisualizer().getRobotSettings().setRobotColor(Color.BLUE));
+        colorMenu.add(blueColor);
+
+        JMenuItem redColor = new JMenuItem("Красный");
+        redColor.addActionListener(e -> getGameWindow().getVisualizer().getRobotSettings().setRobotColor(Color.RED));
+        colorMenu.add(redColor);
+
+        JMenuItem customColor = new JMenuItem("Выбрать цвет...");
+        customColor.addActionListener(e -> {
+            JColorChooser colorChooser = new JColorChooser();
+            Color newColor = JColorChooser.showDialog(
+                    MainApplicationFrame.this,
+                    "Выберите цвет робота",
+                    getGameWindow().getVisualizer().getRobotSettings().getRobotColor()
+            );
+            if (newColor != null) {
+                getGameWindow().getVisualizer().getRobotSettings().setRobotColor(newColor);
+            }
+        });
+        colorMenu.add(customColor);
+
+        robotMenu.add(colorMenu);
+
+        // Скорость робота
+        JMenu speedMenu = new JMenu("Скорость");
+        ButtonGroup speedGroup = new ButtonGroup();
+
+        JRadioButtonMenuItem slowSpeed = new JRadioButtonMenuItem("Медленная");
+        slowSpeed.addActionListener(e -> {
+            RobotSettings settings = getGameWindow().getVisualizer().getRobotSettings();
+            settings.setMaxVelocity(0.05);
+            settings.setMaxAngularVelocity(0.0005);
+        });
+        speedMenu.add(slowSpeed);
+        speedGroup.add(slowSpeed);
+
+        JRadioButtonMenuItem normalSpeed = new JRadioButtonMenuItem("Обычная", true);
+        normalSpeed.addActionListener(e -> {
+            RobotSettings settings = getGameWindow().getVisualizer().getRobotSettings();
+            settings.setMaxVelocity(0.1);
+            settings.setMaxAngularVelocity(0.001);
+        });
+        speedMenu.add(normalSpeed);
+        speedGroup.add(normalSpeed);
+
+        JRadioButtonMenuItem fastSpeed = new JRadioButtonMenuItem("Быстрая");
+        fastSpeed.addActionListener(e -> {
+            RobotSettings settings = getGameWindow().getVisualizer().getRobotSettings();
+            settings.setMaxVelocity(0.2);
+            settings.setMaxAngularVelocity(0.002);
+        });
+        speedMenu.add(fastSpeed);
+        speedGroup.add(fastSpeed);
+
+        robotMenu.add(speedMenu);
+
+        return robotMenu;
     }
 
     private JMenu createLookAndFeelMenu() {
@@ -201,5 +304,14 @@ public class MainApplicationFrame extends JFrame
                 Logger.error("Ошибка при восстановлении окна: " + e.getMessage());
             }
         }
+    }
+
+    private GameWindow getGameWindow() {
+        for (Component comp : desktopPane.getComponents()) {
+            if (comp instanceof GameWindow) {
+                return (GameWindow) comp;
+            }
+        }
+        return null;
     }
 }
