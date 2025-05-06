@@ -1,7 +1,8 @@
 package log;
 
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Что починить:
@@ -14,76 +15,79 @@ import java.util.Collections;
  */
 public class LogWindowSource
 {
-    private int m_iQueueLength;
+    private final int queueLength;
+
+    private final CircularBuffer<LogEntry> messages;
+    private final List<LogChangeListener> listeners = new ArrayList<>();
+    private final ReentrantReadWriteLock listenersLock = new ReentrantReadWriteLock();
+    private volatile LogChangeListener[] activeListeners;
     
-    private ArrayList<LogEntry> m_messages;
-    private final ArrayList<LogChangeListener> m_listeners;
-    private volatile LogChangeListener[] m_activeListeners;
-    
-    public LogWindowSource(int iQueueLength) 
+    public LogWindowSource(int queueLength)
     {
-        m_iQueueLength = iQueueLength;
-        m_messages = new ArrayList<LogEntry>(iQueueLength);
-        m_listeners = new ArrayList<LogChangeListener>();
+        this.queueLength = queueLength;
+        this.messages = new CircularBuffer<>(queueLength);
     }
     
     public void registerListener(LogChangeListener listener)
     {
-        synchronized(m_listeners)
-        {
-            m_listeners.add(listener);
-            m_activeListeners = null;
+        listenersLock.writeLock().lock();
+        try {
+            listeners.add(listener);
+            activeListeners = null;
+        } finally {
+            listenersLock.writeLock().unlock();
         }
     }
     
     public void unregisterListener(LogChangeListener listener)
     {
-        synchronized(m_listeners)
-        {
-            m_listeners.remove(listener);
-            m_activeListeners = null;
+        listenersLock.writeLock().lock();
+        try {
+            listeners.remove(listener);
+            activeListeners = null;
+        } finally {
+            listenersLock.writeLock().unlock();
         }
     }
     
     public void append(LogLevel logLevel, String strMessage)
     {
         LogEntry entry = new LogEntry(logLevel, strMessage);
-        m_messages.add(entry);
-        LogChangeListener [] activeListeners = m_activeListeners;
-        if (activeListeners == null)
-        {
-            synchronized (m_listeners)
-            {
-                if (m_activeListeners == null)
-                {
-                    activeListeners = m_listeners.toArray(new LogChangeListener [0]);
-                    m_activeListeners = activeListeners;
-                }
-            }
-        }
-        for (LogChangeListener listener : activeListeners)
+        messages.add(entry);
+        LogChangeListener [] currentListeners = getActiveListeners();
+
+        for (LogChangeListener listener : currentListeners)
         {
             listener.onLogChanged();
         }
     }
+
+    private LogChangeListener[] getActiveListeners() {
+        LogChangeListener[] result = activeListeners;
+        if (result == null) {
+            listenersLock.readLock().lock();
+            try {
+                result = listeners.toArray(new LogChangeListener[0]);
+                activeListeners = result;
+            } finally {
+                listenersLock.readLock().unlock();
+            }
+        }
+        return result;
+    }
     
     public int size()
     {
-        return m_messages.size();
+        return messages.size();
     }
 
     public Iterable<LogEntry> range(int startFrom, int count)
     {
-        if (startFrom < 0 || startFrom >= m_messages.size())
-        {
-            return Collections.emptyList();
-        }
-        int indexTo = Math.min(startFrom + count, m_messages.size());
-        return m_messages.subList(startFrom, indexTo);
+        return messages.range(startFrom, count);
     }
 
     public Iterable<LogEntry> all()
     {
-        return m_messages;
+        return messages.all();
     }
 }

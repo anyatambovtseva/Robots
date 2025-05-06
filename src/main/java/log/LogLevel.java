@@ -9,16 +9,16 @@ public enum LogLevel
     Error(4),
     Fatal(5);
     
-    private int m_iLevel;
+    private final int level;
     
-    private LogLevel(int iLevel)
+    LogLevel(int level)
     {
-        m_iLevel = iLevel;
+        this.level = level;
     }
     
     public int level()
     {
-        return m_iLevel;
+        return level;
     }
 }
 
