@@ -109,65 +109,59 @@ public class MainApplicationFrame extends JFrame
         JMenu robotMenu = new JMenu("Робот");
         robotMenu.setMnemonic(KeyEvent.VK_R);
 
-        // Размер робота
+        robotMenu.add(createSizeMenu());
+        robotMenu.add(createShapeMenu());
+        robotMenu.add(createColorMenu());
+        robotMenu.add(createSpeedMenu());
+
+        return robotMenu;
+    }
+
+    private JMenu createSizeMenu() {
         JMenu sizeMenu = new JMenu("Размер робота");
         ButtonGroup sizeGroup = new ButtonGroup();
 
-        JRadioButtonMenuItem smallSize = new JRadioButtonMenuItem("Маленький (20)");
-        smallSize.addActionListener(e -> getGameWindow().getVisualizer().setRobotSize(20));
-        sizeMenu.add(smallSize);
-        sizeGroup.add(smallSize);
+        addSizeMenuItem(sizeMenu, sizeGroup, "Маленький (20)", 20, false);
+        addSizeMenuItem(sizeMenu, sizeGroup, "Средний (40)", 40, true);
+        addSizeMenuItem(sizeMenu, sizeGroup, "Большой (60)", 60, false);
 
-        JRadioButtonMenuItem mediumSize = new JRadioButtonMenuItem("Средний (40)", true);
-        mediumSize.addActionListener(e -> getGameWindow().getVisualizer().setRobotSize(40));
-        sizeMenu.add(mediumSize);
-        sizeGroup.add(mediumSize);
+        return sizeMenu;
+    }
 
-        JRadioButtonMenuItem largeSize = new JRadioButtonMenuItem("Большой (60)");
-        largeSize.addActionListener(e -> getGameWindow().getVisualizer().setRobotSize(60));
-        sizeMenu.add(largeSize);
-        sizeGroup.add(largeSize);
+    private void addSizeMenuItem(JMenu menu, ButtonGroup group, String text, int size, boolean selected) {
+        JRadioButtonMenuItem item = new JRadioButtonMenuItem(text, selected);
+        item.addActionListener(e -> getGameWindow().getVisualizer().setRobotSize(size));
+        menu.add(item);
+        group.add(item);
+    }
 
-        robotMenu.add(sizeMenu);
-
-        // Форма робота
+    private JMenu createShapeMenu() {
         JMenu shapeMenu = new JMenu("Форма");
         ButtonGroup shapeGroup = new ButtonGroup();
 
-        JRadioButtonMenuItem ovalShape = new JRadioButtonMenuItem("Овал", true);
-        ovalShape.addActionListener(e -> getGameWindow().getVisualizer().getRobotSettings().setShape(RobotShape.OVAL));
-        shapeMenu.add(ovalShape);
-        shapeGroup.add(ovalShape);
+        addShapeMenuItem(shapeMenu, shapeGroup, "Овал", RobotShape.OVAL, true);
+        addShapeMenuItem(shapeMenu, shapeGroup, "Прямоугольник", RobotShape.RECTANGLE, false);
+        addShapeMenuItem(shapeMenu, shapeGroup, "Треугольник", RobotShape.TRIANGLE, false);
 
-        JRadioButtonMenuItem rectShape = new JRadioButtonMenuItem("Прямоугольник");
-        rectShape.addActionListener(e -> getGameWindow().getVisualizer().getRobotSettings().setShape(RobotShape.RECTANGLE));
-        shapeMenu.add(rectShape);
-        shapeGroup.add(rectShape);
+        return shapeMenu;
+    }
 
-        JRadioButtonMenuItem triangleShape = new JRadioButtonMenuItem("Треугольник");
-        triangleShape.addActionListener(e -> getGameWindow().getVisualizer().getRobotSettings().setShape(RobotShape.TRIANGLE));
-        shapeMenu.add(triangleShape);
-        shapeGroup.add(triangleShape);
+    private void addShapeMenuItem(JMenu menu, ButtonGroup group, String text, RobotShape shape, boolean selected) {
+        JRadioButtonMenuItem item = new JRadioButtonMenuItem(text, selected);
+        item.addActionListener(e -> getGameWindow().getVisualizer().getRobotSettings().setShape(shape));
+        menu.add(item);
+        group.add(item);
+    }
 
-        robotMenu.add(shapeMenu);
-
-        // Цвет робота
+    private JMenu createColorMenu() {
         JMenu colorMenu = new JMenu("Цвет");
-        JMenuItem magentaColor = new JMenuItem("Пурпурный");
-        magentaColor.addActionListener(e -> getGameWindow().getVisualizer().getRobotSettings().setRobotColor(Color.MAGENTA));
-        colorMenu.add(magentaColor);
 
-        JMenuItem blueColor = new JMenuItem("Синий");
-        blueColor.addActionListener(e -> getGameWindow().getVisualizer().getRobotSettings().setRobotColor(Color.BLUE));
-        colorMenu.add(blueColor);
-
-        JMenuItem redColor = new JMenuItem("Красный");
-        redColor.addActionListener(e -> getGameWindow().getVisualizer().getRobotSettings().setRobotColor(Color.RED));
-        colorMenu.add(redColor);
+        addColorMenuItem(colorMenu, "Пурпурный", Color.MAGENTA);
+        addColorMenuItem(colorMenu, "Синий", Color.BLUE);
+        addColorMenuItem(colorMenu, "Красный", Color.RED);
 
         JMenuItem customColor = new JMenuItem("Выбрать цвет...");
         customColor.addActionListener(e -> {
-            JColorChooser colorChooser = new JColorChooser();
             Color newColor = JColorChooser.showDialog(
                     MainApplicationFrame.this,
                     "Выберите цвет робота",
@@ -179,42 +173,36 @@ public class MainApplicationFrame extends JFrame
         });
         colorMenu.add(customColor);
 
-        robotMenu.add(colorMenu);
+        return colorMenu;
+    }
 
-        // Скорость робота
+    private void addColorMenuItem(JMenu menu, String text, Color color) {
+        JMenuItem item = new JMenuItem(text);
+        item.addActionListener(e -> getGameWindow().getVisualizer().getRobotSettings().setRobotColor(color));
+        menu.add(item);
+    }
+
+    private JMenu createSpeedMenu() {
         JMenu speedMenu = new JMenu("Скорость");
         ButtonGroup speedGroup = new ButtonGroup();
 
-        JRadioButtonMenuItem slowSpeed = new JRadioButtonMenuItem("Медленная");
-        slowSpeed.addActionListener(e -> {
+        addSpeedMenuItem(speedMenu, speedGroup, "Медленная", 0.05, 0.0005, false);
+        addSpeedMenuItem(speedMenu, speedGroup, "Обычная", 0.1, 0.001, true);
+        addSpeedMenuItem(speedMenu, speedGroup, "Быстрая", 0.2, 0.002, false);
+
+        return speedMenu;
+    }
+
+    private void addSpeedMenuItem(JMenu menu, ButtonGroup group, String text,
+                                  double maxVelocity, double maxAngularVelocity, boolean selected) {
+        JRadioButtonMenuItem item = new JRadioButtonMenuItem(text, selected);
+        item.addActionListener(e -> {
             RobotSettings settings = getGameWindow().getVisualizer().getRobotSettings();
-            settings.setMaxVelocity(0.05);
-            settings.setMaxAngularVelocity(0.0005);
+            settings.setMaxVelocity(maxVelocity);
+            settings.setMaxAngularVelocity(maxAngularVelocity);
         });
-        speedMenu.add(slowSpeed);
-        speedGroup.add(slowSpeed);
-
-        JRadioButtonMenuItem normalSpeed = new JRadioButtonMenuItem("Обычная", true);
-        normalSpeed.addActionListener(e -> {
-            RobotSettings settings = getGameWindow().getVisualizer().getRobotSettings();
-            settings.setMaxVelocity(0.1);
-            settings.setMaxAngularVelocity(0.001);
-        });
-        speedMenu.add(normalSpeed);
-        speedGroup.add(normalSpeed);
-
-        JRadioButtonMenuItem fastSpeed = new JRadioButtonMenuItem("Быстрая");
-        fastSpeed.addActionListener(e -> {
-            RobotSettings settings = getGameWindow().getVisualizer().getRobotSettings();
-            settings.setMaxVelocity(0.2);
-            settings.setMaxAngularVelocity(0.002);
-        });
-        speedMenu.add(fastSpeed);
-        speedGroup.add(fastSpeed);
-
-        robotMenu.add(speedMenu);
-
-        return robotMenu;
+        menu.add(item);
+        group.add(item);
     }
 
     private JMenu createLookAndFeelMenu() {
