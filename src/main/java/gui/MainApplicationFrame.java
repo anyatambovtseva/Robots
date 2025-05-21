@@ -11,6 +11,7 @@ import javax.swing.*;
 import javax.swing.event.InternalFrameAdapter;
 import javax.swing.event.InternalFrameEvent;
 
+import gui.*;
 import log.Logger;
 
 /**
