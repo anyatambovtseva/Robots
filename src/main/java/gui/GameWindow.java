@@ -18,4 +18,8 @@ public class GameWindow extends JInternalFrame
         getContentPane().add(panel);
         pack();
     }
+
+    public GameVisualizer getVisualizer() {
+        return m_visualizer;
+    }
 }

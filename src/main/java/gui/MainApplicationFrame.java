@@ -1,23 +1,13 @@
 package gui;
 
-import java.awt.Dimension;
-import java.awt.Toolkit;
+import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.swing.JDesktopPane;
-import javax.swing.JFrame;
-import javax.swing.JInternalFrame;
-import javax.swing.JMenu;
-import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
-import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
-import javax.swing.UnsupportedLookAndFeelException;
-import javax.swing.JOptionPane;
+import javax.swing.*;
 import javax.swing.event.InternalFrameAdapter;
 import javax.swing.event.InternalFrameEvent;
 
@@ -95,6 +85,7 @@ public class MainApplicationFrame extends JFrame
         menuBar.add(createFileMenu());
         menuBar.add(createLookAndFeelMenu());
         menuBar.add(createTestMenu());
+        menuBar.add(createRobotMenu());
 
         return menuBar;
     }
@@ -112,6 +103,106 @@ public class MainApplicationFrame extends JFrame
         fileMenu.add(exitItem);
 
         return fileMenu;
+    }
+
+    private JMenu createRobotMenu() {
+        JMenu robotMenu = new JMenu("Робот");
+        robotMenu.setMnemonic(KeyEvent.VK_R);
+
+        robotMenu.add(createSizeMenu());
+        robotMenu.add(createShapeMenu());
+        robotMenu.add(createColorMenu());
+        robotMenu.add(createSpeedMenu());
+
+        return robotMenu;
+    }
+
+    private JMenu createSizeMenu() {
+        JMenu sizeMenu = new JMenu("Размер робота");
+        ButtonGroup sizeGroup = new ButtonGroup();
+
+        addSizeMenuItem(sizeMenu, sizeGroup, "Маленький (20)", 20, false);
+        addSizeMenuItem(sizeMenu, sizeGroup, "Средний (40)", 40, true);
+        addSizeMenuItem(sizeMenu, sizeGroup, "Большой (60)", 60, false);
+
+        return sizeMenu;
+    }
+
+    private void addSizeMenuItem(JMenu menu, ButtonGroup group, String text, int size, boolean selected) {
+        JRadioButtonMenuItem item = new JRadioButtonMenuItem(text, selected);
+        item.addActionListener(e -> getGameWindow().getVisualizer().setRobotSize(size));
+        menu.add(item);
+        group.add(item);
+    }
+
+    private JMenu createShapeMenu() {
+        JMenu shapeMenu = new JMenu("Форма");
+        ButtonGroup shapeGroup = new ButtonGroup();
+
+        addShapeMenuItem(shapeMenu, shapeGroup, "Овал", RobotShape.OVAL, true);
+        addShapeMenuItem(shapeMenu, shapeGroup, "Прямоугольник", RobotShape.RECTANGLE, false);
+        addShapeMenuItem(shapeMenu, shapeGroup, "Треугольник", RobotShape.TRIANGLE, false);
+
+        return shapeMenu;
+    }
+
+    private void addShapeMenuItem(JMenu menu, ButtonGroup group, String text, RobotShape shape, boolean selected) {
+        JRadioButtonMenuItem item = new JRadioButtonMenuItem(text, selected);
+        item.addActionListener(e -> getGameWindow().getVisualizer().getRobotSettings().setShape(shape));
+        menu.add(item);
+        group.add(item);
+    }
+
+    private JMenu createColorMenu() {
+        JMenu colorMenu = new JMenu("Цвет");
+
+        addColorMenuItem(colorMenu, "Пурпурный", Color.MAGENTA);
+        addColorMenuItem(colorMenu, "Синий", Color.BLUE);
+        addColorMenuItem(colorMenu, "Красный", Color.RED);
+
+        JMenuItem customColor = new JMenuItem("Выбрать цвет...");
+        customColor.addActionListener(e -> {
+            Color newColor = JColorChooser.showDialog(
+                    MainApplicationFrame.this,
+                    "Выберите цвет робота",
+                    getGameWindow().getVisualizer().getRobotSettings().getRobotColor()
+            );
+            if (newColor != null) {
+                getGameWindow().getVisualizer().getRobotSettings().setRobotColor(newColor);
+            }
+        });
+        colorMenu.add(customColor);
+
+        return colorMenu;
+    }
+
+    private void addColorMenuItem(JMenu menu, String text, Color color) {
+        JMenuItem item = new JMenuItem(text);
+        item.addActionListener(e -> getGameWindow().getVisualizer().getRobotSettings().setRobotColor(color));
+        menu.add(item);
+    }
+
+    private JMenu createSpeedMenu() {
+        JMenu speedMenu = new JMenu("Скорость");
+        ButtonGroup speedGroup = new ButtonGroup();
+
+        addSpeedMenuItem(speedMenu, speedGroup, "Медленная", 0.05, 0.0005, false);
+        addSpeedMenuItem(speedMenu, speedGroup, "Обычная", 0.1, 0.001, true);
+        addSpeedMenuItem(speedMenu, speedGroup, "Быстрая", 0.2, 0.002, false);
+
+        return speedMenu;
+    }
+
+    private void addSpeedMenuItem(JMenu menu, ButtonGroup group, String text,
+                                  double maxVelocity, double maxAngularVelocity, boolean selected) {
+        JRadioButtonMenuItem item = new JRadioButtonMenuItem(text, selected);
+        item.addActionListener(e -> {
+            RobotSettings settings = getGameWindow().getVisualizer().getRobotSettings();
+            settings.setMaxVelocity(maxVelocity);
+            settings.setMaxAngularVelocity(maxAngularVelocity);
+        });
+        menu.add(item);
+        group.add(item);
     }
 
     private JMenu createLookAndFeelMenu() {
@@ -201,5 +292,14 @@ public class MainApplicationFrame extends JFrame
                 Logger.error("Ошибка при восстановлении окна: " + e.getMessage());
             }
         }
+    }
+
+    private GameWindow getGameWindow() {
+        for (Component comp : desktopPane.getComponents()) {
+            if (comp instanceof GameWindow) {
+                return (GameWindow) comp;
+            }
+        }
+        return null;
     }
 }
