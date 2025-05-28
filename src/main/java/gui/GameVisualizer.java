@@ -138,8 +138,6 @@ public class GameVisualizer extends JPanel {
         int robotX = robotCell.x * CELL_SIZE + CELL_SIZE/2;
         int robotY = robotCell.y * CELL_SIZE + CELL_SIZE/2;
 
-        AffineTransform oldTransform = g2d.getTransform();
-
         if (!currentPath.isEmpty()) {
             Point nextCell = currentPath.get(0);
             double angle = Math.atan2(nextCell.y - robotCell.y, nextCell.x - robotCell.x);
@@ -172,8 +170,6 @@ public class GameVisualizer extends JPanel {
 
         g2d.setColor(Color.WHITE);
         fillOval(g2d, robotX + robotSize/4, robotY - robotSize/8, robotSize/4, robotSize/4);
-
-        g2d.setTransform(oldTransform);
     }
 
     private static void fillOval(Graphics g, int centerX, int centerY, int diam1, int diam2)

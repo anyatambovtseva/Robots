@@ -53,7 +53,7 @@ public class AStarPathFinder {
     }
 
     private List<Point> reconstructPath(Node endNode) {
-        LinkedList<Point> path = new LinkedList<>();
+        List<Point> path = new LinkedList<>();
         Node current = endNode;
         while (current != null) {
             path.addFirst(current.position);
