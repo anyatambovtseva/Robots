@@ -2,13 +2,13 @@ package log;
 
 import java.util.Iterator;
 
-public class SafeIterator<E, T> implements Iterator<E> {
-    private final CircularBuffer<T> buffer;
+public class TemporalSafeIterator<E, T> implements Iterator<E> {
+    private final TemporalCircularBuffer<T> buffer;
     private final int endIndex;
     private int currentIndex;
     private final int maxIndex;
 
-    public SafeIterator(CircularBuffer<T> buffer, int startFrom, int count) {
+    public TemporalSafeIterator(TemporalCircularBuffer<T> buffer, int startFrom, int count) {
         this.buffer = buffer;
         int currentSize = buffer.size();
         this.currentIndex = startFrom;
